@@ -1,5 +1,5 @@
 import constant from "./constant";
-
+// forceX
 export default function(x) {
   var strength = constant(0.1),
       nodes,

@@ -11,16 +11,18 @@
   stroke: none;
   stroke-width: 40px;
 }
-
+svg {
+  border: 1px solid #aaa;
+}
 </style>
 <svg width="960" height="600"></svg>
-<!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
-<script src="https://d3js.org/d3-selection.v1.min.js"></script>
-<script src="https://d3js.org/d3-collection.v1.min.js"></script>
-<script src="https://d3js.org/d3-dispatch.v1.min.js"></script>
-<script src="https://d3js.org/d3-quadtree.v1.min.js"></script>
-<script src="https://d3js.org/d3-timer.v1.min.js"></script>
-<script src="https://d3js.org/d3-request.v1.min.js"></script>
+<script src="../libs/d3.js"></script>
+<!--<script src="https://d3js.org/d3-selection.v1.min.js"></script>-->
+<!--<script src="https://d3js.org/d3-collection.v1.min.js"></script>-->
+<!--<script src="https://d3js.org/d3-dispatch.v1.min.js"></script>-->
+<!--<script src="https://d3js.org/d3-quadtree.v1.min.js"></script>-->
+<!--<script src="https://d3js.org/d3-timer.v1.min.js"></script>-->
+<!--<script src="https://d3js.org/d3-request.v1.min.js"></script>-->
 <!-- <script src="https://d3js.org/d3-force.v1.min.js"></script> -->
 <script src="../build/d3-force.js" type="text/javascript" charset="utf-8"></script>
 <script>
@@ -29,14 +31,41 @@
       height = +svg.attr("height");
 
   var simulation = d3.forceSimulation()
-      // .force("link", d3.forceLink().id(function(d) { return d.id; }))
-      // .force("charge", d3.forceManyBody())
-      // .force("center", d3.forceCenter(width / 2, height / 2));
-      .force("center", d3.forceCenter())
+       .force("link", d3.forceLink().id(function(d) { return d.id; }).strength(0)) // 节点之间的引力
+//       .force("charge", d3.forceManyBody()) // 节点之间的斥力
+       .force("center", d3.forceCenter(width / 2, height / 2)) // 向心力
+       .force('radial', d3.forceRadial(50, width / 2, height / 2)) // 默认环行布局
+       .force('radial', d3.forceRadialMoreCenter(100) // 可以定义环行布局group的中心点
+           .x((d)=> ((d.parent && !isNaN(d.parent.x)) ? d.parent.x + d.parent.vx : d.x))
+           .y((d)=> ((d.parent && !isNaN(d.parent.y)) ? d.parent.y + d.parent.vy : d.y)))
+       .force("collide", d3.forceCollide(4)) //
+
+  var center_nodes_group = []
+  var interpolate = d3.interpolateRgb("steelblue", "brown");
+  var color = d3.scaleLinear()
+    .range([0, 1])
+    .nice()
 
   d3.json("miserables.json", function(error, graph) {
-    if (error) throw error;
+    if (error) throw err
+    center_nodes_group = d3.nest()
+      .key(function(d) { return d.group; })
+      .entries(graph.nodes);
 
+    graph.links = []
+    center_nodes_group.forEach(function (group) {
+      var value = group.values
+      value && value.forEach(function(d, i) {
+        if(i!= 0) {
+          d.parent = value[0]
+          graph.links.push({source: value[0].id, target: d.id, value: 1})
+        }
+      })
+    })
+
+    color.domain(d3.extent(graph.nodes,function(d) {
+      return d.group
+    }))
     var link = svg.append("g")
         .attr("class", "links")
       .selectAll("line")
@@ -49,10 +78,11 @@
       .data(graph.nodes)
       .enter().append("circle")
         .attr("r", 2.5)
-        // .call(d3.drag()
-        //     .on("start", dragstarted)
-        //     .on("drag", dragged)
-        //     .on("end", dragended));
+        .style("fill",function(d){ return interpolate(+color(d.group));})
+        .call(d3.drag()
+           .on("start", dragstarted)
+           .on("drag", dragged)
+           .on("end", dragended));
 
     node.append("title")
         .text(function(d) { return d.id; });
@@ -60,16 +90,16 @@
     simulation
         .nodes(graph.nodes)
         .on("tick", ticked);
-
-    // simulation.force("link")
-    //     .links(graph.links);
+//
+     simulation.force("link")
+         .links(graph.links);
 
     function ticked() {
-      link
-          .attr("x1", function(d) { return d.source.x; })
-          .attr("y1", function(d) { return d.source.y; })
-          .attr("x2", function(d) { return d.target.x; })
-          .attr("y2", function(d) { return d.target.y; });
+//      link
+//          .attr("x1", function(d) { return d.source.x; })
+//          .attr("y1", function(d) { return d.source.y; })
+//          .attr("x2", function(d) { return d.target.x; })
+//          .attr("y2", function(d) { return d.target.y; });
 
       node
           .attr("cx", function(d) { return d.x; })

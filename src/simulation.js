@@ -39,7 +39,6 @@ export default function(nodes) {
     var i, n = nodes.length, node;
 
     alpha += (alphaTarget - alpha) * alphaDecay;
-
     forces.each(function(force) {
       force(alpha);
     });
@@ -52,7 +51,7 @@ export default function(nodes) {
       else node.y = node.fy, node.vy = 0;
     }
   }
-
+  // 初始化Nodes
   function initializeNodes() {
     for (var i = 0, n = nodes.length, node; i < n; ++i) {
       node = nodes[i], node.index = i;
